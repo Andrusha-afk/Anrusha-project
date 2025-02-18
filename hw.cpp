@@ -1,64 +1,57 @@
 #include <iostream>
 #include <vector>
+#include <map>
 #include <string>
 #include <fstream>
 #include <sstream>
-#include <map> 
 using namespace std;
 
+// Структура для хранения информации о музее
 struct Museum {
-    string name;
-    string location;
-    string description;
-    vector<string>* reviews;
-    vector<string>* souvenirs;
-
-    Museum() {
-        reviews = new vector<string>();
-        souvenirs = new vector<string>();
-    }
-
-    ~Museum() {
-        delete reviews;
-        delete souvenirs;
-    }
+    string name; //Название
+    string location; //Локация
+    string description; //Описание
+    vector<string> reviews; // Отзывы
+    vector<string> souvenirs; // Сувениры
 };
 
-void saveMuseumsByCity(const vector<Museum*>& museums) {
-    map<string, vector<Museum*> > museumsByCity; 
+// Функция для сохранения данных в файл
+void saveMuseumsByCity(const vector<Museum>& museums) {
+    map<string, vector<Museum> > museumsByCity;
 
-    for (size_t i = 0; i < museums.size(); ++i) { 
-        const Museum* museum = museums[i];
-
-        if (museumsByCity.find(museum->location) == museumsByCity.end()) {
-            museumsByCity[museum->location] = vector<Museum*>();
-        }
-
-        museumsByCity[museum->location].push_back(const_cast<Museum*>(museum));
+    // Группируем музеи по городам
+    for (size_t i = 0; i < museums.size(); ++i) {
+        const Museum& museum = museums[i];
+        museumsByCity[museum.location].push_back(museum);
     }
 
-    for (map<string, vector<Museum*> >::const_iterator it = museumsByCity.begin(); it != museumsByCity.end(); ++it) { 
+    // Сохраняем данные в файлы
+    for (map<string, vector<Museum> >::const_iterator it = museumsByCity.begin(); it != museumsByCity.end(); ++it) {
         const string& city = it->first;
-        const vector<Museum*>& cityMuseums = it->second;
+        const vector<Museum>& cityMuseums = it->second;
 
         string filename = city + ".txt";
-        ofstream file(filename);
+        ofstream file(filename.c_str()); 
         if (!file) {
-            cerr << "Ошибка открытия файла для записи музеев города " << city << ".\n";
+            cout << "Ошибка открытия файла для записи музеев города " << city << ".\n";
             continue;
         }
 
-        for (size_t i = 0; i < cityMuseums.size(); ++i) { 
-            const Museum* museum = cityMuseums[i];
-            file << museum->name << "|" << museum->location << "|" << museum->description << "|";
+        for (size_t i = 0; i < cityMuseums.size(); ++i) {
+            const Museum& museum = cityMuseums[i];
+            file << museum.name << "|"
+                 << museum.location << "|"
+                 << museum.description << "|";
 
-            for (size_t j = 0; j < museum->reviews->size(); ++j) { 
-                file << (*museum->reviews)[j] << ",";
+            // Сохраняем отзывы
+            for (size_t j = 0; j < museum.reviews.size(); ++j) {
+                file << museum.reviews[j] << ",";
             }
             file << "|";
 
-            for (size_t j = 0; j < museum->souvenirs->size(); ++j) { 
-                file << (*museum->souvenirs)[j] << ",";
+            // Сохраняем сувениры
+            for (size_t j = 0; j < museum.souvenirs.size(); ++j) {
+                file << museum.souvenirs[j] << ",";
             }
             file << "\n";
         }
@@ -68,291 +61,225 @@ void saveMuseumsByCity(const vector<Museum*>& museums) {
     }
 }
 
-void loadMuseumsByCity(vector<Museum*>& museums) {
-    vector<string> cities;
-    cities.push_back("Владивосток");
-    cities.push_back("Волгоград");
-    cities.push_back("Москва");
-    cities.push_back("Париж");
-    cities.push_back("Марсель");
-    cities.push_back("Нью-Йорк");
-    cities.push_back("Лос-Анджелес");
-    cities.push_back("Токио");
-    cities.push_back("Киото");
-    cities.push_back("Лондон");
-    cities.push_back("Эдинбург");
+// Функция для загрузки данных из файлов
+void loadMuseumsByCity(vector<Museum>& museums) {
+    // Список городов
+    string cities[] = {"Владивосток", "Москва", "Париж", "Лондон"};
+    size_t cityCount = sizeof(cities) / sizeof(cities[0]);
 
-    for (size_t i = 0; i < cities.size(); ++i) { 
+    for (size_t i = 0; i < cityCount; ++i) {
         const string& city = cities[i];
         string filename = city + ".txt";
-        ifstream file(filename);
+        ifstream file(filename.c_str()); 
         if (!file) {
-            continue;
+            continue; // Если файл не существует, переходим к следующему городу
         }
+
         string line;
         while (getline(file, line)) {
             stringstream ss(line);
-            Museum* museum = new Museum();
-            getline(ss, museum->name, '|');
-            getline(ss, museum->location, '|');
-            getline(ss, museum->description, '|');
+            Museum museum;
+
+            // Разбираем строку на поля
+            getline(ss, museum.name, '|');
+            getline(ss, museum.location, '|');
+            getline(ss, museum.description, '|');
+
             string reviews, souvenirs;
             getline(ss, reviews, '|');
             getline(ss, souvenirs, '|');
+
+            // Разбираем отзывы
             stringstream reviewStream(reviews);
             string review;
             while (getline(reviewStream, review, ',')) {
                 if (!review.empty()) {
-                    museum->reviews->push_back(review);
+                    museum.reviews.push_back(review);
                 }
             }
+
+            // Разбираем сувениры
             stringstream souvenirStream(souvenirs);
             string souvenir;
             while (getline(souvenirStream, souvenir, ',')) {
                 if (!souvenir.empty()) {
-                    museum->souvenirs->push_back(souvenir);
+                    museum.souvenirs.push_back(souvenir);
                 }
             }
+
             museums.push_back(museum);
         }
+
         file.close();
         cout << "Информация о музеях города " << city << " успешно загружена из файла '" << filename << "'.\n";
     }
 }
 
-void displayMuseums(const vector<Museum*>& museums) {
+// Функция для отображения списка музеев
+void displayMuseums(const vector<Museum>& museums) {
     if (museums.empty()) {
         cout << "\nСписок музеев пуст. Добавьте новый музей.\n";
         return;
     }
+
     cout << "\nСписок музеев:\n";
-    for (size_t i = 0; i < museums.size(); ++i) { 
-        const Museum* museum = museums[i];
-        cout << i + 1 << ". " << museum->name << " (" << museum->location << ")\n";
-        cout << "   Описание: " << museum->description << "\n";
-        if (!museum->reviews->empty()) {
+    for (size_t i = 0; i < museums.size(); ++i) {
+        const Museum& museum = museums[i];
+        cout << i + 1 << ". " << museum.name << " (" << museum.location << ")\n";
+        cout << "   Описание: " << museum.description << "\n";
+
+        if (!museum.reviews.empty()) {
             cout << "   Отзывы: \n";
-            for (size_t j = 0; j < museum->reviews->size(); ++j) { 
-                cout << "      - " << (*museum->reviews)[j] << "\n";
+            for (size_t j = 0; j < museum.reviews.size(); ++j) {
+                cout << "      - " << museum.reviews[j] << "\n";
             }
         }
     }
 }
 
-void displaySouvenirs(const vector<Museum*>& museums) {
-    if (museums.empty()) {
-        cout << "\nСписок музеев пуст. Добавьте новый музей.\n";
-        return;
-    }
-    cout << "\nСписок сувениров по музеям:\n";
-    for (size_t i = 0; i < museums.size(); ++i) { 
-        const Museum* museum = museums[i];
-        cout << museum->name << " (" << museum->location << ")\n";
-        if (museum->souvenirs->empty()) {
-            cout << "   Сувениров пока нет.\n";
-        } else {
-            for (size_t j = 0; j < museum->souvenirs->size(); ++j) { 
-                cout << "      - " << (*museum->souvenirs)[j] << "\n";
-            }
-        }
-    }
-}
+// Функция для добавления нового музея
+void addMuseum(vector<Museum>& museums, const string& city) {
+    Museum newMuseum;
+    newMuseum.location = city;
 
-void addMuseum(vector<Museum*>& museums, const string& city) {
-    Museum* newMuseum = new Museum();
-    newMuseum->location = city;
     cout << "Введите название музея: ";
     cin.ignore();
-    getline(cin, newMuseum->name);
+    getline(cin, newMuseum.name);
+
     cout << "Введите описание музея: ";
-    getline(cin, newMuseum->description);
+    getline(cin, newMuseum.description);
+
     museums.push_back(newMuseum);
     cout << "Музей успешно добавлен!\n";
 }
 
-void addReview(vector<Museum*>& museums) {
+// Функция для добавления отзыва
+void addReview(vector<Museum>& museums) {
     if (museums.empty()) {
         cout << "\nСписок музеев пуст. Сначала добавьте музей.\n";
         return;
     }
+
     displayMuseums(museums);
     cout << "Введите номер музея, к которому хотите оставить отзыв: ";
     int index;
     cin >> index;
-    cin.ignore();
+
     if (index < 1 || index > static_cast<int>(museums.size())) {
         cout << "Неверный номер музея.\n";
         return;
     }
+
     cout << "Введите ваш отзыв: ";
+    cin.ignore();
     string review;
     getline(cin, review);
-    museums[index - 1]->reviews->push_back(review);
+
+    museums[index - 1].reviews.push_back(review);
     cout << "Отзыв успешно добавлен!\n";
 }
 
-void addSouvenir(vector<Museum*>& museums) {
+// Функция для добавления сувенира
+void addSouvenir(vector<Museum>& museums) {
     if (museums.empty()) {
         cout << "\nСписок музеев пуст. Сначала добавьте музей.\n";
         return;
     }
+
     displayMuseums(museums);
-    cout << "Введите номер музея, к которому хотите добавить сувениры: ";
+    cout << "Введите номер музея, к которому хотите добавить сувенир: ";
     int index;
     cin >> index;
-    cin.ignore();
+
     if (index < 1 || index > static_cast<int>(museums.size())) {
         cout << "Неверный номер музея.\n";
         return;
     }
+
     cout << "Введите название сувенира: ";
+    cin.ignore();
     string souvenir;
     getline(cin, souvenir);
-    museums[index - 1]->souvenirs->push_back(souvenir);
+
+    museums[index - 1].souvenirs.push_back(souvenir);
     cout << "Сувенир успешно добавлен!\n";
 }
 
-void cleanup(vector<Museum*>& museums) {
-    for (size_t i = 0; i < museums.size(); ++i) { 
-        delete museums[i];
-    }
-    museums.clear();
-}
-
 int main() {
-    vector<Museum*> museums;
-    loadMuseumsByCity(museums); 
+    vector<Museum> museums;
+
+    // Автоматическая загрузка данных при запуске программы
+    loadMuseumsByCity(museums);
+
     int choice;
     string selectedCity;
+
     do {
-        cout << "\nИндивидуальный гид по миру музеев и искусств";
-        cout << "\nВыберите страну:";
-        cout << "\n1. Россия";
-        cout << "\n2. Франция";
-        cout << "\n3. США";
-        cout << "\n4. Япония";
-        cout << "\n5. Великобритания";
-        cout << "\n6. Выход";
-        cout << "\nВведите ваш выбор: ";
+        cout << "\nИндивидуальный гид по миру музеев и искусств\n";
+        cout << "1. Россия\n";
+        cout << "2. Франция\n";
+        cout << "3. Великобритания\n";
+        cout << "4. Выход\n";
+        cout << "Введите ваш выбор: ";
         cin >> choice;
-        if (choice == 6) {
-            saveMuseumsByCity(museums); 
-            cleanup(museums);
+
+        if (choice == 5) {
+            // Автоматическое сохранение данных при выходе из программы
+            saveMuseumsByCity(museums);
             cout << "\nСпасибо за использование гида! До свидания.\n";
             break;
         }
+
         switch (choice) {
-            case 1: { 
-                int cityChoice;
-                cout << "\nВыберите город России:";
-                cout << "\n1. Владивосток";
-                cout << "\n2. Волгоград";
-                cout << "\n3. Москва";
-                cout << "\nВведите ваш выбор: ";
-                cin >> cityChoice;
-                switch (cityChoice) {
-                    case 1: selectedCity = "Владивосток"; break;
-                    case 2: selectedCity = "Волгоград"; break;
-                    case 3: selectedCity = "Москва"; break;
-                    default: cout << "\nНеверный выбор города, попробуйте снова.\n"; continue;
-                }
+            case 1:
+                selectedCity = "Москва";
                 break;
-            }
-            case 2: { 
-                int cityChoice;
-                cout << "\nВыберите город Франции:";
-                cout << "\n1. Париж";
-                cout << "\n2. Марсель";
-                cout << "\nВведите ваш выбор: ";
-                cin >> cityChoice;
-                switch (cityChoice) {
-                    case 1: selectedCity = "Париж"; break;
-                    case 2: selectedCity = "Марсель"; break;
-                    default: cout << "\nНеверный выбор города, попробуйте снова.\n"; continue;
-                }
+            case 2:
+                selectedCity = "Париж";
                 break;
-            }
-            case 3: { 
-                int cityChoice;
-                cout << "\nВыберите город США:";
-                cout << "\n1. Нью-Йорк";
-                cout << "\n2. Лос-Анджелес";
-                cout << "\nВведите ваш выбор: ";
-                cin >> cityChoice;
-                switch (cityChoice) {
-                    case 1: selectedCity = "Нью-Йорк"; break;
-                    case 2: selectedCity = "Лос-Анджелес"; break;
-                    default: cout << "\nНеверный выбор города, попробуйте снова.\n"; continue;
-                }
+            case 3:
+                selectedCity = "Лондон";
                 break;
-            }
-            case 4: { 
-                int cityChoice;
-                cout << "\nВыберите город Японии:";
-                cout << "\n1. Токио";
-                cout << "\n2. Киото";
-                cout << "\nВведите ваш выбор: ";
-                cin >> cityChoice;
-                switch (cityChoice) {
-                    case 1: selectedCity = "Токио"; break;
-                    case 2: selectedCity = "Киото"; break;
-                    default: cout << "\nНеверный выбор города, попробуйте снова.\n"; continue;
-                }
-                break;
-            }
-            case 5: { 
-                int cityChoice;
-                cout << "\nВыберите город Великобритании:";
-                cout << "\n1. Лондон";
-                cout << "\n2. Эдинбург";
-                cout << "\nВведите ваш выбор: ";
-                cin >> cityChoice;
-                switch (cityChoice) {
-                    case 1: selectedCity = "Лондон"; break;
-                    case 2: selectedCity = "Эдинбург"; break;
-                    default: cout << "\nНеверный выбор города, попробуйте снова.\n"; continue;
-                }
-                break;
-            }
             default:
                 cout << "\nНеверный выбор страны, попробуйте снова.\n";
                 continue;
         }
+
         int cityAction;
         do {
-            cout << "\nГород: " << selectedCity;
-            cout << "\n1. Просмотреть список музеев";
-            cout << "\n2. Добавить музей";
-            cout << "\n3. Добавить отзыв";
-            cout << "\n4. Добавить сувенир";
-            cout << "\n5. Просмотреть сувениры";
-            cout << "\n6. Назад к выбору страны";
-            cout << "\nВведите ваш выбор: ";
+            cout << "\nГород: " << selectedCity << "\n";
+            cout << "1. Просмотреть список музеев\n";
+            cout << "2. Добавить музей\n";
+            cout << "3. Добавить отзыв\n";
+            cout << "4. Добавить сувенир\n";
+            cout << "5. Назад к выбору страны\n";
+            cout << "Введите ваш выбор: ";
             cin >> cityAction;
-            cin.ignore();
+
             switch (cityAction) {
                 case 1:
                     displayMuseums(museums);
                     break;
                 case 2:
                     addMuseum(museums, selectedCity);
+                    saveMuseumsByCity(museums); // Сохраняем данные после добавления
                     break;
                 case 3:
                     addReview(museums);
+                    saveMuseumsByCity(museums); // Сохраняем данные после добавления
                     break;
                 case 4:
                     addSouvenir(museums);
+                    saveMuseumsByCity(museums); // Сохраняем данные после добавления
                     break;
                 case 5:
-                    displaySouvenirs(museums);
-                    break;
-                case 6:
                     cout << "\nВозврат к выбору страны.\n";
                     break;
                 default:
                     cout << "\nНеверный выбор, попробуйте снова.\n";
             }
-        } while (cityAction != 6);
-    } while (choice != 6);
+        } while (cityAction != 5);
+    } while (choice != 4);
+
     return 0;
 }
