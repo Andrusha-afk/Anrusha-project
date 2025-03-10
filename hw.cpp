@@ -1,154 +1,126 @@
 #include <iostream>
 #include <vector>
-#include <map>
-#include <string>
+#include <string> 
 #include <fstream>
-#include <sstream>
 using namespace std;
 
-// Структура для хранения информации о музее
 struct Museum {
-    string name; //Название
-    string location; //Локация
-    string description; //Описание
-    vector<string> reviews; // Отзывы
-    vector<string> souvenirs; // Сувениры
+    string name;
+    string location;
+    string description;
+    vector<string> reviews;
+    vector<string> souvenirs;
 };
-
-// Функция для сохранения данных в файл
-void saveMuseumsByCity(const vector<Museum>& museums) {
-    map<string, vector<Museum> > museumsByCity;
-
-    // Группируем музеи по городам
-    for (size_t i = 0; i < museums.size(); ++i) {
-        const Museum& museum = museums[i];
-        museumsByCity[museum.location].push_back(museum);
-    }
-
-    // Сохраняем данные в файлы
-    for (map<string, vector<Museum> >::const_iterator it = museumsByCity.begin(); it != museumsByCity.end(); ++it) {
-        const string& city = it->first;
-        const vector<Museum>& cityMuseums = it->second;
-
-        string filename = city + ".txt";
-        ofstream file(filename.c_str()); 
-        if (!file) {
-            cout << "Ошибка открытия файла для записи музеев города " << city << ".\n";
-            continue;
+void saveMuseumsToFile(vector<Museum>& museums) { //это ссылка на вектор объектов типа Museum.
+    ofstream file("museums.txt");
+    if (!file) {
+        cout << "Ошибка: не удалось открыть файл для записи.\n";
+        return;
+    } 
+    for (Museum museum : museums) { //Цикл проходит по всем элементам контейнера museums по порядку.
+        file << museum.name << "|" << museum.location << "|" << museum.description << "|";
+        for (int i = 0; i < museum.reviews.size(); ++i) {
+            file << museum.reviews[i];
+            if (i < museum.reviews.size() - 1) file << ","; //Эта строка кода добавляет запятую (,) после каждого элемента, кроме последнего , при записи элементов из контейнера reviews объекта museum в файл.
         }
-
-        for (size_t i = 0; i < cityMuseums.size(); ++i) {
-            const Museum& museum = cityMuseums[i];
-            file << museum.name << "|"
-                 << museum.location << "|"
-                 << museum.description << "|";
-
-            // Сохраняем отзывы
-            for (size_t j = 0; j < museum.reviews.size(); ++j) {
-                file << museum.reviews[j] << ",";
-            }
-            file << "|";
-
-            // Сохраняем сувениры
-            for (size_t j = 0; j < museum.souvenirs.size(); ++j) {
-                file << museum.souvenirs[j] << ",";
-            }
-            file << "\n";
+        file << "|";
+        for (int i = 0; i < museum.souvenirs.size(); ++i) {
+            file << museum.souvenirs[i];
+            if (i < museum.souvenirs.size() - 1) file << ",";
         }
-
-        file.close();
-        cout << "Информация о музеях города " << city << " успешно сохранена в файл '" << filename << "'.\n";
+        file << "\n";
     }
+    file.close();
+    cout << "Данные успешно сохранены в файл 'museums.txt'.\n";
 }
 
-// Функция для загрузки данных из файлов
-void loadMuseumsByCity(vector<Museum>& museums) {
-    // Список городов
-    string cities[] = {"Владивосток", "Москва", "Париж", "Лондон"};
-    size_t cityCount = sizeof(cities) / sizeof(cities[0]);
-
-    for (size_t i = 0; i < cityCount; ++i) {
-        const string& city = cities[i];
-        string filename = city + ".txt";
-        ifstream file(filename.c_str()); 
-        if (!file) {
-            continue; // Если файл не существует, переходим к следующему городу
-        }
-
-        string line;
-        while (getline(file, line)) {
-            stringstream ss(line);
-            Museum museum;
-
-            // Разбираем строку на поля
-            getline(ss, museum.name, '|');
-            getline(ss, museum.location, '|');
-            getline(ss, museum.description, '|');
-
-            string reviews, souvenirs;
-            getline(ss, reviews, '|');
-            getline(ss, souvenirs, '|');
-
-            // Разбираем отзывы
-            stringstream reviewStream(reviews);
-            string review;
-            while (getline(reviewStream, review, ',')) {
-                if (!review.empty()) {
-                    museum.reviews.push_back(review);
-                }
-            }
-
-            // Разбираем сувениры
-            stringstream souvenirStream(souvenirs);
-            string souvenir;
-            while (getline(souvenirStream, souvenir, ',')) {
-                if (!souvenir.empty()) {
-                    museum.souvenirs.push_back(souvenir);
-                }
-            }
-
-            museums.push_back(museum);
-        }
-
-        file.close();
-        cout << "Информация о музеях города " << city << " успешно загружена из файла '" << filename << "'.\n";
+vector<Museum> loadMuseumsFromFile() { //Функция vector<Museum> loadMuseumsFromFile() — это функция, которая загружает данные о музеях из файла и возвращает их в виде вектора объектов типа Museum.
+    vector<Museum> museums;
+    ifstream file("museums.txt");
+    if (!file) {
+        cout << "Файл 'museums.txt' не найден.\n";
+        return museums;
     }
+
+    string line;
+    while (getline(file, line)) {
+        Museum museum;
+        int pos = 0;
+        museum.name = line.substr(0, line.find('|'));
+        pos = line.find('|') + 1;
+        museum.location = line.substr(pos, line.find('|', pos) - pos);
+        pos = line.find('|', pos) + 1;
+        museum.description = line.substr(pos, line.find('|', pos) - pos);
+        pos = line.find('|', pos) + 1;
+
+        string reviewsStr = line.substr(pos, line.find('|', pos) - pos);
+        pos = line.find('|', pos) + 1;
+        if (!reviewsStr.empty()) {
+            int start = 0;
+            size_t end = reviewsStr.find(',');
+            while (end != string::npos) {
+                museum.reviews.push_back(reviewsStr.substr(start, end - start));
+                start = end + 1;
+                end = reviewsStr.find(',', start);
+            }
+            museum.reviews.push_back(reviewsStr.substr(start));
+        }
+
+        // Разбираем сувениры
+        string souvenirsStr = line.substr(pos);
+        if (!souvenirsStr.empty()) {
+            int start = 0;
+            int end = souvenirsStr.find(','); // end — это позиция первой запятой в строке, найденная с помощью метода find(',').
+            while (end != string::npos) { // Цикл продолжается, пока end != string::npos. Это означает, что пока есть запятые в строке, мы продолжаем разбивать её на части.
+                museum.souvenirs.push_back(souvenirsStr.substr(start, end - start));
+                start = end + 1;
+                end = souvenirsStr.find(',', start);
+            }
+            museum.souvenirs.push_back(souvenirsStr.substr(start));
+        }
+
+        museums.push_back(museum); //push_back — это метод стандартного контейнера std::vector в C++. Он добавляет новый элемент в конец вектора, увеличивая его размер на 1.
+    }
+    file.close();
+    cout << "Данные успешно загружены из файла 'museums.txt'.\n";
+    return museums;
 }
 
 // Функция для отображения списка музеев
-void displayMuseums(const vector<Museum>& museums) {
+void displayMuseums (vector<Museum>& museums) {
     if (museums.empty()) {
-        cout << "\nСписок музеев пуст. Добавьте новый музей.\n";
+        cout << "Список музеев пуст.\n";
         return;
     }
-
-    cout << "\nСписок музеев:\n";
-    for (size_t i = 0; i < museums.size(); ++i) {
-        const Museum& museum = museums[i];
-        cout << i + 1 << ". " << museum.name << " (" << museum.location << ")\n";
-        cout << "   Описание: " << museum.description << "\n";
-
-        if (!museum.reviews.empty()) {
-            cout << "   Отзывы: \n";
-            for (size_t j = 0; j < museum.reviews.size(); ++j) {
-                cout << "      - " << museum.reviews[j] << "\n";
+    cout << "Список музеев:\n";
+    for (int i = 0; i < museums.size(); ++i) { //Префиксный инкремент (++i): 2. Постфиксный инкремент (i++):
+        cout << i + 1 << ". " << museums[i].name << " (" << museums[i].location << ")\n";
+        cout << "   Описание: " << museums[i].description << "\n";
+        if (!museums[i].reviews.empty()) {
+            cout << "   Отзывы:\n";
+            for (string review : museums[i].reviews) { // : разделить переменную в коллекции 
+                cout << "      - " << review << "\n";
+            }
+        }
+        if (!museums[i].souvenirs.empty()) {
+            cout << "   Сувениры:\n";
+            for (string souvenir : museums[i].souvenirs) {
+                cout << "      - " << souvenir << "\n";
             }
         }
     }
 }
 
 // Функция для добавления нового музея
-void addMuseum(vector<Museum>& museums, const string& city) {
+void addMuseum(vector<Museum>& museums) {
     Museum newMuseum;
-    newMuseum.location = city;
-
     cout << "Введите название музея: ";
     cin.ignore();
     getline(cin, newMuseum.name);
-
+    cout << "Введите город: ";
+    getline(cin, newMuseum.location);
     cout << "Введите описание музея: ";
     getline(cin, newMuseum.description);
-
     museums.push_back(newMuseum);
     cout << "Музей успешно добавлен!\n";
 }
@@ -156,130 +128,89 @@ void addMuseum(vector<Museum>& museums, const string& city) {
 // Функция для добавления отзыва
 void addReview(vector<Museum>& museums) {
     if (museums.empty()) {
-        cout << "\nСписок музеев пуст. Сначала добавьте музей.\n";
+        cout << "Список музеев пуст. Добавьте новый музей.\n";
         return;
     }
-
     displayMuseums(museums);
-    cout << "Введите номер музея, к которому хотите оставить отзыв: ";
+    cout << "Введите номер музея для добавления отзыва: ";
     int index;
     cin >> index;
-
-    if (index < 1 || index > static_cast<int>(museums.size())) {
+    if (index < 1 || index >(museums.size())) {
         cout << "Неверный номер музея.\n";
         return;
     }
-
     cout << "Введите ваш отзыв: ";
-    cin.ignore();
+    cin.ignore(); //Это необходимо, если перед этим использовался cin >>, так как он оставляет символ новой строки (\n) в
     string review;
     getline(cin, review);
-
-    museums[index - 1].reviews.push_back(review);
+    museums[index - 1].reviews.push_back(review); //index - 1 — индекс музея в векторе (вычитание -1 используется, если пользователь вводит номер музея с 1, а не с 0).
     cout << "Отзыв успешно добавлен!\n";
 }
 
 // Функция для добавления сувенира
 void addSouvenir(vector<Museum>& museums) {
     if (museums.empty()) {
-        cout << "\nСписок музеев пуст. Сначала добавьте музей.\n";
+        cout << "Список музеев пуст. Добавьте новый музей.\n";
         return;
     }
-
     displayMuseums(museums);
-    cout << "Введите номер музея, к которому хотите добавить сувенир: ";
+    cout << "Введите номер музея для добавления сувенира: ";
     int index;
     cin >> index;
-
-    if (index < 1 || index > static_cast<int>(museums.size())) {
+    if (index < 1 or index > (museums.size())) {
         cout << "Неверный номер музея.\n";
         return;
     }
-
     cout << "Введите название сувенира: ";
     cin.ignore();
     string souvenir;
     getline(cin, souvenir);
-
     museums[index - 1].souvenirs.push_back(souvenir);
     cout << "Сувенир успешно добавлен!\n";
 }
 
 int main() {
-    vector<Museum> museums;
-
-    // Автоматическая загрузка данных при запуске программы
-    loadMuseumsByCity(museums);
+    setlocale(0, "RU");
+    system("chsp 1251");
+    vector<Museum> museums = loadMuseumsFromFile();
 
     int choice;
-    string selectedCity;
-
-    do {
-        cout << "\nИндивидуальный гид по миру музеев и искусств\n";
-        cout << "1. Россия\n";
-        cout << "2. Франция\n";
-        cout << "3. Великобритания\n";
-        cout << "4. Выход\n";
+    while (true) { 
+        cout << "\nИндивидуальный гид по музеям\n";
+        cout << "1. Просмотреть список музеев\n";
+        cout << "2. Добавить музей\n";
+        cout << "3. Добавить отзыв\n";
+        cout << "4. Добавить сувенир\n";
+        cout << "5. Сохранить и выйти\n";
         cout << "Введите ваш выбор: ";
-        cin >> choice;
 
-        if (choice == 5) {
-            // Автоматическое сохранение данных при выходе из программы
-            saveMuseumsByCity(museums);
-            cout << "\nСпасибо за использование гида! До свидания.\n";
-            break;
+        if (!(cin >> choice)) {
+            cout << "Ошибка ввода. Программа завершается.\n";
+            break; 
         }
 
         switch (choice) {
-            case 1:
-                selectedCity = "Москва";
-                break;
-            case 2:
-                selectedCity = "Париж";
-                break;
-            case 3:
-                selectedCity = "Лондон";
-                break;
-            default:
-                cout << "\nНеверный выбор страны, попробуйте снова.\n";
-                continue;
+        case 1:
+            displayMuseums(museums);
+            break;
+        case 2:
+            addMuseum(museums);
+            break;
+        case 3:
+            addReview(museums);
+            break;
+        case 4:
+            addSouvenir(museums);
+            break;
+        case 5:
+            saveMuseumsToFile(museums);
+            cout << "Данные сохранены. До свидания!\n";
+            return 0; 
+        default:
+            cout << "Неверный выбор. Попробуйте снова.\n";
+            break;
         }
-
-        int cityAction;
-        do {
-            cout << "\nГород: " << selectedCity << "\n";
-            cout << "1. Просмотреть список музеев\n";
-            cout << "2. Добавить музей\n";
-            cout << "3. Добавить отзыв\n";
-            cout << "4. Добавить сувенир\n";
-            cout << "5. Назад к выбору страны\n";
-            cout << "Введите ваш выбор: ";
-            cin >> cityAction;
-
-            switch (cityAction) {
-                case 1:
-                    displayMuseums(museums);
-                    break;
-                case 2:
-                    addMuseum(museums, selectedCity);
-                    saveMuseumsByCity(museums); // Сохраняем данные после добавления
-                    break;
-                case 3:
-                    addReview(museums);
-                    saveMuseumsByCity(museums); // Сохраняем данные после добавления
-                    break;
-                case 4:
-                    addSouvenir(museums);
-                    saveMuseumsByCity(museums); // Сохраняем данные после добавления
-                    break;
-                case 5:
-                    cout << "\nВозврат к выбору страны.\n";
-                    break;
-                default:
-                    cout << "\nНеверный выбор, попробуйте снова.\n";
-            }
-        } while (cityAction != 5);
-    } while (choice != 4);
+    }
 
     return 0;
 }

@@ -3,6 +3,7 @@
         "vector": "cpp",
         "map": "cpp",
         "iostream": "cpp",
-        "new": "cpp"
+        "new": "cpp",
+        "fstream": "cpp"
     }
 }
